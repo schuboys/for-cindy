@@ -1,0 +1,1021 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, viewport-fit=cover">
+<meta name="color-scheme" content="light">
+<meta name="robots" content="noindex">
+<title>Cindy's Sky</title>
+<style>
+  :root {
+    --edge: #8cc8fc;
+    --ink: #6b2a5c;
+    --font: system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+  }
+  * { box-sizing: border-box; }
+  html, body {
+    margin: 0; padding: 0; height: 100%;
+    background: var(--edge);
+    overflow: hidden;
+    overscroll-behavior: none;
+    -webkit-user-select: none; user-select: none;
+    -webkit-tap-highlight-color: transparent;
+    font-family: var(--font);
+  }
+  body { position: fixed; inset: 0; touch-action: none; }
+  #sky {
+    position: fixed; inset: 0;
+    width: 100%; height: 100%;
+    display: block;
+    touch-action: none;
+  }
+  .ui {
+    position: fixed;
+    z-index: 10;
+    transition: opacity .6s ease;
+  }
+  .ui.dim { opacity: .07; }
+  .btn {
+    -webkit-appearance: none; appearance: none;
+    border: 2px solid rgba(255,255,255,.85);
+    background: rgba(255,255,255,.42);
+    color: var(--ink);
+    font-family: var(--font);
+    font-size: 20px;
+    line-height: 1;
+    padding: 12px 14px;
+    border-radius: 999px;
+    cursor: pointer;
+    backdrop-filter: blur(6px);
+    -webkit-backdrop-filter: blur(6px);
+    box-shadow: 0 6px 18px rgba(120, 40, 110, .18);
+  }
+  .btn:active { transform: scale(.94); }
+  #snap { right: max(14px, env(safe-area-inset-right)); bottom: max(14px, env(safe-area-inset-bottom)); }
+  #shelfBtn { left: max(14px, env(safe-area-inset-left)); bottom: max(14px, env(safe-area-inset-bottom)); }
+  #whisper {
+    left: 0; right: 0; bottom: max(6px, env(safe-area-inset-bottom));
+    text-align: center;
+    font-size: 11px;
+    letter-spacing: .14em;
+    color: rgba(120, 45, 105, .45);
+    pointer-events: none;
+    z-index: 5;
+  }
+  #shelf {
+    left: max(10px, env(safe-area-inset-left));
+    right: max(10px, env(safe-area-inset-right));
+    bottom: calc(max(14px, env(safe-area-inset-bottom)) + 62px);
+    max-width: 420px;
+    max-height: min(70vh, 560px);
+    overflow-y: auto;
+    -webkit-overflow-scrolling: touch;
+    touch-action: pan-y;
+    background: rgba(255,255,255,.9);
+    border: 2px solid rgba(255,255,255,.95);
+    border-radius: 22px;
+    padding: 18px 18px 14px;
+    color: var(--ink);
+    box-shadow: 0 18px 44px rgba(120, 40, 110, .28);
+    display: none;
+    z-index: 11;
+  }
+  #shelf.open { display: block; }
+  #shelf h1 { font-size: 17px; margin: 0 0 4px; letter-spacing: .01em; }
+  #shelf p.lede { font-size: 13px; line-height: 1.45; margin: 0 0 14px; color: rgba(107,42,92,.85); }
+  #shelf a.dl {
+    display: block;
+    text-decoration: none;
+    color: var(--ink);
+    background: rgba(255, 210, 236, .55);
+    border: 1.5px solid rgba(255,255,255,.9);
+    border-radius: 14px;
+    padding: 10px 12px;
+    margin-bottom: 9px;
+  }
+  #shelf a.dl strong { display: block; font-size: 14px; }
+  #shelf a.dl span { display: block; font-size: 12px; line-height: 1.4; opacity: .8; margin-top: 3px; }
+  #shelf .sig { font-size: 11px; text-align: center; opacity: .6; margin: 12px 0 2px; letter-spacing: .1em; }
+  #toast {
+    left: 50%; transform: translateX(-50%);
+    bottom: calc(max(14px, env(safe-area-inset-bottom)) + 74px);
+    background: rgba(255,255,255,.92);
+    color: var(--ink);
+    font-size: 13px;
+    padding: 9px 14px;
+    border-radius: 999px;
+    box-shadow: 0 8px 22px rgba(120,40,110,.22);
+    display: none;
+    z-index: 12;
+    max-width: 80vw;
+    text-align: center;
+  }
+</style>
+</head>
+<body>
+<canvas id="sky"></canvas>
+
+<div id="whisper" class="ui">for Cindy &hearts;</div>
+
+<button id="snap" class="ui btn" type="button" title="Snap wallpaper" aria-label="Snap wallpaper">&#128248;</button>
+<button id="shelfBtn" class="ui btn" type="button" title="Downloads" aria-label="Downloads">&hearts;</button>
+
+<div id="shelf" class="ui">
+  <h1>Take the sky with you &hearts;</h1>
+  <p class="lede">Everything here is yours &mdash; no sign-in, no accounts, nothing phoning home. Pick whichever one fits the screen you&rsquo;re looking at.</p>
+
+  <a class="dl" href="./downloads/wallpapers.zip" download>
+    <strong>Wallpapers &middot; .zip</strong>
+    <span>Desktop and phone sizes. Windows: unzip, right-click a PNG &rarr; <em>Set as desktop background</em>. iPhone: save to Photos &rarr; Settings &rarr; Wallpaper.</span>
+  </a>
+
+  <a class="dl" href="./downloads/stills-screensaver.zip" download>
+    <strong>Stills pack (screensaver) &middot; .zip</strong>
+    <span>Unzip into a folder. Windows: Settings &rarr; Personalization &rarr; Lock screen &rarr; Screen saver &rarr; choose <em>Photos</em> &rarr; Browse to that folder &rarr; Save.</span>
+  </a>
+
+  <a class="dl" href="./downloads/CindyDrift.scr" download>
+    <strong>CindyDrift &middot; .scr</strong>
+    <span>The real moving screensaver. Right-click the file &rarr; <em>Install</em>. Windows may show a blue SmartScreen box &mdash; click <em>More info</em> &rarr; <em>Run anyway</em>. (If your work laptop blocks it, use the stills pack above.)</span>
+  </a>
+
+  <a class="dl" href="./downloads/cindy-loop.mp4" download>
+    <strong>Phone loop &middot; .mp4</strong>
+    <span>iPhone: save the video to Photos, then either convert it to a Live Photo (any &ldquo;video to Live Photo&rdquo; app) and set it as your lock screen, or use the stills as a lock-screen photo shuffle.</span>
+  </a>
+
+  <a class="dl" href="./downloads/cindy-loop-desktop.mp4" download>
+    <strong>Desktop loop &middot; .mp4</strong>
+    <span>1920&times;1080 version of the same drift &mdash; nice on a second monitor or a TV.</span>
+  </a>
+
+  <div class="sig">MADE WITH LOVE &middot; ATL &#9992;</div>
+</div>
+
+<div id="toast" class="ui"></div>
+
+<script>
+(function () {
+  "use strict";
+
+  /* ---------- deterministic RNG (mulberry32) ---------- */
+  function mulberry32(a) {
+    return function () {
+      a |= 0; a = (a + 0x6D2B79F5) | 0;
+      var t = Math.imul(a ^ (a >>> 15), 1 | a);
+      t = (t + Math.imul(t ^ (t >>> 7), 61 | t)) ^ t;
+      return ((t ^ (t >>> 14)) >>> 0) / 4294967296;
+    };
+  }
+
+  var params = new URLSearchParams(location.search);
+  var renderParam = params.get("render");
+  var RENDER = null;
+  if (renderParam) {
+    var m = /^(\d{2,5})x(\d{2,5})$/.exec(renderParam.trim());
+    if (m) RENDER = { w: parseInt(m[1], 10), h: parseInt(m[2], 10) };
+  }
+  var SEED = parseInt(params.get("seed") || "1", 10);
+  if (!isFinite(SEED)) SEED = 1;
+  var RENDER_T = parseFloat(params.get("t") || "0");
+  if (!isFinite(RENDER_T) || RENDER_T < 0) RENDER_T = 0;
+  if (RENDER_T > 3600) RENDER_T = 3600;
+
+  var rnd = mulberry32(SEED);
+
+  /* ---------- sprites ---------- */
+  var IMAGE_FILES = {
+    coke: "./assets/coke.png",
+    cotton: "./assets/cotton.png",
+    disney: "./assets/disney.png",
+    candy: "./assets/candy.png",
+    tiktok: "./assets/tiktok.png",
+    minnie: "./assets/minnie.png",
+    bow: "./assets/bow.png",
+    golden: "./assets/golden.png",
+    cottage: "./assets/cottage.png"
+  };
+  var KINDS = ["coke", "cotton", "disney", "candy", "tiktok", "minnie", "bow", "golden"];
+  var sprites = {};
+  var spritesReady = false;
+  (function loadImages() {
+    var names = Object.keys(IMAGE_FILES);
+    var pending = names.length;
+    names.forEach(function (kind) {
+      var img = new Image();
+      img.decoding = "sync";
+      img.onload = img.onerror = function () {
+        pending--;
+        if (pending === 0) spritesReady = true;
+      };
+      img.src = IMAGE_FILES[kind];
+      sprites[kind] = img;
+    });
+  })();
+
+  function usable(sprite) {
+    return !!sprite && sprite.complete && sprite.naturalWidth > 0;
+  }
+
+  /* ---------- words + colors ---------- */
+  var BURST_WORDS = [
+    "BAM!", "POP!", "WOW!", "SWEET!", "YUM!", "LIKE!", "OMG!", "YAY!",
+    "LOVE YOU!", "ATL ✈", "FILLS MY SOUL", "MINNIE!", "GOOD DOG!"
+  ];
+  var BURST_COLORS = ["#ff2a6d", "#05d9e8", "#ff9f1c", "#7b2cbf", "#ff006e"];
+  var CONFETTI_COLORS = ["#ff2a6d", "#ffd166", "#05d9e8", "#7b2cbf", "#ffffff", "#ff9f1c"];
+  var STAR_COLORS = ["#ffd6e8", "#fff7ad", "#b3f0ff", "#e8b3f0"];
+
+  var SHADOWS = {
+    coke: "rgba(255, 30, 80, 0.55)",
+    cotton: "rgba(255, 120, 220, 0.55)",
+    disney: "rgba(120, 80, 220, 0.55)",
+    candy: "rgba(255, 170, 0, 0.55)",
+    tiktok: "rgba(5, 217, 232, 0.55)",
+    minnie: "rgba(255, 60, 110, 0.55)",
+    bow: "rgba(255, 40, 90, 0.55)",
+    golden: "rgba(255, 180, 90, 0.55)",
+    cottage: "rgba(120, 190, 255, 0.5)"
+  };
+
+  var ITEM_COUNT = 18;
+  var SWIRL_SPEED = 0.04;
+
+  /* ---------- state ---------- */
+  var canvas = document.getElementById("sky");
+  var ctx = canvas.getContext("2d");
+  var W = 0, H = 0, DPR = 1;
+  var items = [], stars = [], sparkles = [], bursts = [], bows = [], confetti = [];
+  var cottage = null;
+  var nextBurst = 0;
+  var nextCottage = 0;
+  var simT = 0;
+  var grainTile = null;
+
+  function scaleOf() { return H / 1080; }
+
+  function seedScene() {
+    var s = scaleOf();
+    items = [];
+    for (var i = 0; i < ITEM_COUNT; i++) {
+      var kind = KINDS[i % KINDS.length];
+      items.push({
+        kind: kind,
+        x: rnd() * W,
+        y: rnd() * H * 0.85 + H * 0.08,
+        size: (110 + rnd() * 90) * s,
+        vx: (10 + rnd() * 22) * (rnd() < 0.5 ? 1 : -1),
+        vy: (6 + rnd() * 14) * (rnd() < 0.5 ? 1 : -1),
+        rot: (rnd() - 0.5) * 0.6,
+        vRot: (rnd() - 0.5) * 0.45,
+        wobble: 0.8 + rnd() * 1.4,
+        phase: rnd() * Math.PI * 2,
+        pulse: 1,
+        pop: 0,
+        sx: 1, sy: 1,
+        flung: 0,
+        dragging: false,
+        shadow: SHADOWS[kind]
+      });
+    }
+    stars = [];
+    for (var j = 0; j < 14; j++) {
+      stars.push({
+        x: rnd() * W, y: rnd() * H,
+        r: (6 + rnd() * 10) * s,
+        speed: 0.7 + rnd() * 1.2,
+        spin: (rnd() - 0.5) * 0.8,
+        phase: rnd() * Math.PI * 2,
+        color: STAR_COLORS[Math.floor(rnd() * STAR_COLORS.length)]
+      });
+    }
+    sparkles = [];
+    for (var k = 0; k < 22; k++) {
+      sparkles.push({
+        x: rnd() * W, y: rnd() * H,
+        r: (2 + rnd() * 5) * s,
+        speed: 1.5 + rnd() * 2.5,
+        phase: rnd() * Math.PI * 2
+      });
+    }
+    bursts = []; bows = []; confetti = [];
+    cottage = null;
+    nextBurst = 0;
+    nextCottage = simT + 90 + rnd() * 90;
+  }
+
+  function buildGrain() {
+    var size = 128;
+    var tile = document.createElement("canvas");
+    tile.width = tile.height = size;
+    var tctx = tile.getContext("2d");
+    var data = tctx.createImageData(size, size);
+    var noise = mulberry32(0x9E3779B9);
+    for (var i = 0; i < data.data.length; i += 4) {
+      var v = 120 + Math.floor(noise() * 135);
+      data.data[i] = data.data[i + 1] = data.data[i + 2] = v;
+      data.data[i + 3] = 255;
+    }
+    tctx.putImageData(data, 0, 0);
+    grainTile = tile;
+  }
+  buildGrain();
+
+  /* ---------- sizing ---------- */
+  function resize() {
+    if (RENDER) {
+      W = RENDER.w; H = RENDER.h; DPR = 1;
+      canvas.width = W; canvas.height = H;
+      canvas.style.width = W + "px";
+      canvas.style.height = H + "px";
+      ctx.setTransform(1, 0, 0, 1, 0, 0);
+      return;
+    }
+    DPR = Math.min(window.devicePixelRatio || 1, 3);
+    W = Math.max(1, Math.round(window.innerWidth));
+    H = Math.max(1, Math.round(window.innerHeight));
+    canvas.width = Math.round(W * DPR);
+    canvas.height = Math.round(H * DPR);
+    canvas.style.width = W + "px";
+    canvas.style.height = H + "px";
+    ctx.setTransform(DPR, 0, 0, DPR, 0, 0);
+  }
+
+  /* ---------- helpers ---------- */
+  function spriteHeightFor(sprite, w) {
+    if (!usable(sprite)) return w;
+    return (sprite.naturalHeight / sprite.naturalWidth) * w;
+  }
+
+  function measureBurst(text, fontSize) {
+    ctx.save();
+    ctx.font = "900 " + fontSize + "px " + FONT_STACK;
+    var wpx = ctx.measureText(text).width;
+    ctx.restore();
+    return wpx;
+  }
+
+  var FONT_STACK = 'system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif';
+
+  function addBurst(x, y, text, color, boost) {
+    var s = scaleOf();
+    var fontSize = 32 * s * (boost || 1);
+    if (text.length > 8) fontSize *= Math.max(0.62, 8 / text.length);
+    var textW = measureBurst(text, fontSize);
+    bursts.push({
+      x: x, y: y,
+      text: text,
+      color: color || BURST_COLORS[Math.floor(rnd() * BURST_COLORS.length)],
+      w: textW / 2 + 26 * s,
+      h: fontSize * 0.92,
+      fontSize: fontSize,
+      rot: (rnd() - 0.5) * 0.6,
+      maxScale: 1.4 + rnd() * 0.6,
+      life: 1.2,
+      maxLife: 1.2
+    });
+    if (bursts.length > 24) bursts.splice(0, bursts.length - 24);
+  }
+
+  function rainBows(x, y) {
+    var s = scaleOf();
+    var n = 12 + Math.floor(rnd() * 9);
+    for (var i = 0; i < n; i++) {
+      bows.push({
+        x: x + (rnd() - 0.5) * 160 * s,
+        y: y + (rnd() - 0.5) * 60 * s,
+        vx: (rnd() - 0.5) * 120 * s,
+        vy: (40 + rnd() * 120) * s,
+        size: (26 + rnd() * 26) * s,
+        rot: (rnd() - 0.5) * 2,
+        vRot: (rnd() - 0.5) * 3,
+        life: 2.2 + rnd() * 1.4,
+        maxLife: 3.6
+      });
+    }
+    if (bows.length > 160) bows.splice(0, bows.length - 160);
+  }
+
+  function eruptConfetti(x, y) {
+    var s = scaleOf();
+    for (var i = 0; i < 90; i++) {
+      var a = rnd() * Math.PI * 2;
+      var sp = (120 + rnd() * 420) * s;
+      confetti.push({
+        x: x, y: y,
+        vx: Math.cos(a) * sp,
+        vy: Math.sin(a) * sp - 120 * s,
+        w: (5 + rnd() * 8) * s,
+        h: (8 + rnd() * 12) * s,
+        rot: rnd() * Math.PI,
+        vRot: (rnd() - 0.5) * 10,
+        color: CONFETTI_COLORS[Math.floor(rnd() * CONFETTI_COLORS.length)],
+        life: 1.8 + rnd() * 1.4,
+        maxLife: 3.2
+      });
+    }
+    if (confetti.length > 400) confetti.splice(0, confetti.length - 400);
+  }
+
+  function spawnCottage() {
+    var s = scaleOf();
+    var fromLeft = rnd() < 0.5;
+    var size = Math.min(90 * s, W * 0.18);
+    cottage = {
+      kind: "cottage",
+      x: fromLeft ? -size : W + size,
+      y: H * (0.2 + rnd() * 0.6),
+      size: size,
+      vx: (fromLeft ? 1 : -1) * (26 + rnd() * 16),
+      vy: (rnd() - 0.5) * 8,
+      rot: (rnd() - 0.5) * 0.4,
+      vRot: (rnd() - 0.5) * 0.5,
+      wobble: 0.9 + rnd() * 1.2,
+      phase: rnd() * Math.PI * 2,
+      pulse: 1,
+      pop: 0,
+      sx: 1, sy: 1,
+      flung: 0,
+      dragging: false,
+      shadow: SHADOWS.cottage
+    };
+  }
+
+  /* ---------- update ---------- */
+  function moveItem(item, dt, t, s, bounceAll) {
+    if (item.dragging) return;
+    if (item.flung > 0) {
+      var damp = Math.pow(0.55, dt);
+      item.vx *= damp;
+      item.vy *= damp;
+      item.flung -= dt;
+      var spd = Math.hypot(item.vx, item.vy) * s;
+      if (spd < 60) item.flung = 0;
+    }
+    item.x += item.vx * dt * s;
+    item.y += item.vy * dt * s + Math.sin(t * item.wobble + item.phase) * 0.5 * s;
+    item.rot += item.vRot * dt;
+    item.pulse = 1 + 0.12 * Math.sin(t * 3.5 + item.phase);
+    if (item.pop > 0) item.pop = Math.max(0, item.pop - dt * 2.2);
+    item.sx += (1 - item.sx) * Math.min(1, dt * 8);
+    item.sy += (1 - item.sy) * Math.min(1, dt * 8);
+
+    var margin = item.size * 0.6;
+    if (bounceAll || item.flung > 0) {
+      if (item.x > W - margin) { item.x = W - margin; item.vx = -Math.abs(item.vx); }
+      if (item.x < margin) { item.x = margin; item.vx = Math.abs(item.vx); }
+    } else {
+      if (item.x > W + margin) item.x = -margin;
+      if (item.x < -margin) item.x = W + margin;
+    }
+    if (item.y > H - margin) { item.y = H - margin; item.vy = -Math.abs(item.vy); }
+    if (item.y < margin) { item.y = margin; item.vy = Math.abs(item.vy); }
+  }
+
+  function update(dt, t) {
+    var s = scaleOf();
+
+    for (var i = 0; i < items.length; i++) moveItem(items[i], dt, t, s, false);
+
+    if (cottage) {
+      if (cottage.dragging || cottage.flung > 0) {
+        moveItem(cottage, dt, t, s, true);
+      } else {
+        cottage.x += cottage.vx * dt * s;
+        cottage.y += cottage.vy * dt * s + Math.sin(t * cottage.wobble + cottage.phase) * 0.4 * s;
+        cottage.rot += cottage.vRot * dt;
+        cottage.pulse = 1 + 0.12 * Math.sin(t * 3.5 + cottage.phase);
+        if (cottage.pop > 0) cottage.pop = Math.max(0, cottage.pop - dt * 2.2);
+        cottage.sx += (1 - cottage.sx) * Math.min(1, dt * 8);
+        cottage.sy += (1 - cottage.sy) * Math.min(1, dt * 8);
+        var edge = cottage.size * 2;
+        if (cottage.x > W + edge || cottage.x < -edge) cottage = null;
+      }
+    } else if (!RENDER && t > nextCottage) {
+      spawnCottage();
+      nextCottage = t + 90 + rnd() * 90;
+    }
+
+    // ambient bursts
+    if (spritesReady && t > nextBurst) {
+      var anchor = items[Math.floor(rnd() * items.length)];
+      if (anchor) {
+        addBurst(
+          anchor.x + (rnd() - 0.5) * 80 * s,
+          anchor.y - anchor.size * 0.6 - (20 + rnd() * 40) * s,
+          BURST_WORDS[Math.floor(rnd() * BURST_WORDS.length)],
+          BURST_COLORS[Math.floor(rnd() * BURST_COLORS.length)]
+        );
+      }
+      nextBurst = t + 0.7 + rnd() * 1.3;
+    }
+    for (var b = bursts.length - 1; b >= 0; b--) {
+      bursts[b].life -= dt;
+      if (bursts[b].life <= 0) bursts.splice(b, 1);
+    }
+
+    // falling bows
+    for (var w = bows.length - 1; w >= 0; w--) {
+      var bw = bows[w];
+      bw.vy += 320 * s * dt;
+      bw.vx *= Math.pow(0.85, dt);
+      bw.x += bw.vx * dt;
+      bw.y += bw.vy * dt;
+      bw.rot += bw.vRot * dt;
+      bw.life -= dt;
+      if (bw.life <= 0 || bw.y > H + 120 * s) bows.splice(w, 1);
+    }
+
+    // confetti
+    for (var c = confetti.length - 1; c >= 0; c--) {
+      var cf = confetti[c];
+      cf.vy += 520 * s * dt;
+      cf.vx *= Math.pow(0.6, dt);
+      cf.x += cf.vx * dt;
+      cf.y += cf.vy * dt;
+      cf.rot += cf.vRot * dt;
+      cf.life -= dt;
+      if (cf.life <= 0 || cf.y > H + 80 * s) confetti.splice(c, 1);
+    }
+  }
+
+  /* ---------- draw ---------- */
+  function drawStarShape(c, spikes, outer, inner) {
+    var rot = (Math.PI / 2) * 3;
+    var step = Math.PI / spikes;
+    c.beginPath();
+    c.moveTo(0, -outer);
+    for (var i = 0; i < spikes; i++) {
+      c.lineTo(Math.cos(rot) * outer, Math.sin(rot) * outer);
+      rot += step;
+      c.lineTo(Math.cos(rot) * inner, Math.sin(rot) * inner);
+      rot += step;
+    }
+    c.lineTo(0, -outer);
+    c.closePath();
+    c.fill();
+  }
+
+  function drawItem(c, item, s) {
+    var sprite = sprites[item.kind];
+    if (!usable(sprite)) return;
+    var pop = 1 + 0.35 * Math.sin(Math.PI * Math.min(1, item.pop));
+    var sw = item.size;
+    var sh = spriteHeightFor(sprite, sw);
+    c.save();
+    c.translate(item.x, item.y);
+    c.rotate(item.rot);
+    c.scale(item.pulse * pop * item.sx, item.pulse * pop * item.sy);
+    c.shadowColor = item.shadow;
+    c.shadowBlur = 28 * s;
+    c.shadowOffsetX = 8 * s;
+    c.shadowOffsetY = 12 * s;
+    c.drawImage(sprite, -sw / 2, -sh / 2, sw, sh);
+    c.restore();
+  }
+
+  function drawScene(c, w, h, t) {
+    var s = h / 1080;
+
+    var cx = w * (0.45 + 0.1 * Math.sin(t * SWIRL_SPEED));
+    var cy = h * (0.35 + 0.08 * Math.cos(t * SWIRL_SPEED * 0.7));
+    var sky = c.createRadialGradient(cx, cy, 0, cx, cy, Math.max(w, h) * 1.1);
+    sky.addColorStop(0, "#ffb3d9");
+    sky.addColorStop(0.4, "#e8b3f0");
+    sky.addColorStop(0.75, "#b3dfff");
+    sky.addColorStop(1, "#8cc8fc");
+    c.fillStyle = sky;
+    c.fillRect(0, 0, w, h);
+
+    // candy stripes
+    c.save();
+    c.globalAlpha = 0.12;
+    for (var i = 0; i < 6; i++) {
+      var x = ((t * 18 + i * 240) * s) % (w + 360 * s) - 180 * s;
+      var y = h * (0.1 + i * 0.16);
+      var sw = 120 * s;
+      var grad = c.createLinearGradient(x, 0, x + sw, 0);
+      grad.addColorStop(0, "rgba(255,255,255,0)");
+      grad.addColorStop(0.5, "rgba(255,255,255,0.7)");
+      grad.addColorStop(1, "rgba(255,255,255,0)");
+      c.fillStyle = grad;
+      c.beginPath();
+      c.ellipse(x + sw / 2, y, sw / 2, 22 * s, 0, 0, Math.PI * 2);
+      c.fill();
+    }
+    c.restore();
+
+    // stars
+    for (var st = 0; st < stars.length; st++) {
+      var star = stars[st];
+      var a = 0.35 + 0.35 * Math.sin(t * star.speed + star.phase);
+      var r = star.r * (0.8 + 0.2 * Math.sin(t * star.speed * 2 + star.phase));
+      c.save();
+      c.translate(star.x, star.y);
+      c.rotate(t * star.spin + star.phase);
+      c.globalAlpha = a;
+      c.fillStyle = star.color;
+      drawStarShape(c, 5, r, r * 0.45);
+      c.restore();
+    }
+
+    // items
+    for (var it = 0; it < items.length; it++) drawItem(c, items[it], s);
+    if (cottage) drawItem(c, cottage, s);
+
+    // falling bows
+    var bowSprite = sprites.bow;
+    if (usable(bowSprite)) {
+      for (var bi = 0; bi < bows.length; bi++) {
+        var bw = bows[bi];
+        var bh = spriteHeightFor(bowSprite, bw.size);
+        c.save();
+        c.globalAlpha = Math.max(0, Math.min(1, bw.life / 1.0));
+        c.translate(bw.x, bw.y);
+        c.rotate(bw.rot);
+        c.drawImage(bowSprite, -bw.size / 2, -bh / 2, bw.size, bh);
+        c.restore();
+      }
+      c.globalAlpha = 1;
+    }
+
+    // confetti
+    for (var ci = 0; ci < confetti.length; ci++) {
+      var cf = confetti[ci];
+      c.save();
+      c.globalAlpha = Math.max(0, Math.min(1, cf.life / 1.0));
+      c.translate(cf.x, cf.y);
+      c.rotate(cf.rot);
+      c.fillStyle = cf.color;
+      c.fillRect(-cf.w / 2, -cf.h / 2, cf.w, cf.h);
+      c.restore();
+    }
+    c.globalAlpha = 1;
+
+    // comic bursts
+    for (var bu = 0; bu < bursts.length; bu++) {
+      var b = bursts[bu];
+      var life = b.life / b.maxLife;
+      var scale = Math.sin((1 - life) * Math.PI * 0.9) * b.maxScale;
+      c.save();
+      c.translate(b.x, b.y);
+      c.scale(scale, scale);
+      c.rotate(b.rot);
+      c.globalAlpha = Math.max(0, life);
+      c.fillStyle = b.color;
+      c.beginPath();
+      c.ellipse(0, 0, b.w, b.h, 0, 0, Math.PI * 2);
+      c.fill();
+      c.strokeStyle = "#ffffff";
+      c.lineWidth = 5 * s;
+      c.stroke();
+      c.fillStyle = "#ffffff";
+      c.font = "900 " + b.fontSize + "px " + FONT_STACK;
+      c.textAlign = "center";
+      c.textBaseline = "middle";
+      c.strokeStyle = "rgba(0,0,0,0.25)";
+      c.lineWidth = 3 * s;
+      c.strokeText(b.text, 0, 0);
+      c.fillText(b.text, 0, 0);
+      c.restore();
+    }
+    c.globalAlpha = 1;
+
+    // sparkles
+    c.fillStyle = "#ffffff";
+    for (var sp = 0; sp < sparkles.length; sp++) {
+      var q = sparkles[sp];
+      c.globalAlpha = 0.4 + 0.5 * Math.sin(t * q.speed + q.phase);
+      var qr = q.r * (0.7 + 0.3 * Math.sin(t * q.speed * 1.7 + q.phase));
+      c.beginPath();
+      c.arc(q.x, q.y, qr, 0, Math.PI * 2);
+      c.fill();
+    }
+    c.globalAlpha = 1;
+
+    // vignette
+    var vg = c.createRadialGradient(w / 2, h / 2, Math.max(w, h) * 0.3, w / 2, h / 2, Math.max(w, h) * 0.78);
+    vg.addColorStop(0, "rgba(0,0,0,0)");
+    vg.addColorStop(1, "rgba(0,0,0,0.25)");
+    c.fillStyle = vg;
+    c.fillRect(0, 0, w, h);
+
+    // grain
+    if (grainTile) {
+      var pat = c.createPattern(grainTile, "repeat");
+      if (pat) {
+        c.save();
+        c.globalAlpha = 0.04;
+        c.globalCompositeOperation = "overlay";
+        c.fillStyle = pat;
+        c.fillRect(0, 0, w, h);
+        c.restore();
+      }
+    }
+  }
+
+  /* ---------- hit testing + interaction ---------- */
+  function hitTest(x, y) {
+    var candidates = items.slice();
+    if (cottage) candidates.push(cottage);
+    var best = null, bestD = Infinity;
+    for (var i = candidates.length - 1; i >= 0; i--) {
+      var it = candidates[i];
+      var sprite = sprites[it.kind];
+      var sw = it.size * it.pulse;
+      var sh = spriteHeightFor(sprite, it.size) * it.pulse;
+      var r = Math.max(sw, sh) * 0.5;
+      var d = Math.hypot(x - it.x, y - it.y);
+      if (d < r && d < bestD) { best = it; bestD = d; }
+    }
+    return best;
+  }
+
+  var drag = null;
+
+  function pointerDown(x, y) {
+    var hit = hitTest(x, y);
+    drag = {
+      item: hit,
+      startX: x, startY: y,
+      lastX: x, lastY: y,
+      lastT: performance.now(),
+      vx: 0, vy: 0,
+      moved: 0,
+      startedAt: performance.now()
+    };
+    if (hit) {
+      hit.dragging = true;
+      hit.grabX = hit.x - x;
+      hit.grabY = hit.y - y;
+    }
+  }
+
+  function pointerMove(x, y) {
+    if (!drag) return;
+    var now = performance.now();
+    var dt = Math.max(0.001, (now - drag.lastT) / 1000);
+    var dx = x - drag.lastX, dy = y - drag.lastY;
+    drag.moved += Math.hypot(dx, dy);
+    drag.vx = dx / dt;
+    drag.vy = dy / dt;
+    drag.lastX = x; drag.lastY = y; drag.lastT = now;
+    var it = drag.item;
+    if (it) {
+      it.x = x + it.grabX;
+      it.y = y + it.grabY;
+      var speed = Math.hypot(drag.vx, drag.vy);
+      var k = Math.min(0.28, speed / 6000);
+      if (Math.abs(dx) > Math.abs(dy)) { it.sx = 1 + k; it.sy = 1 - k; }
+      else { it.sx = 1 - k; it.sy = 1 + k; }
+    }
+  }
+
+  function pointerUp(x, y) {
+    if (!drag) return;
+    var it = drag.item;
+    var tapped = drag.moved < 10 && (performance.now() - drag.startedAt) < 400;
+    var s = scaleOf();
+    if (it) {
+      it.dragging = false;
+      if (tapped) {
+        it.pop = 1;
+        if (it.kind === "cottage") {
+          eruptConfetti(it.x, it.y);
+          addBurst(it.x, it.y - it.size * 0.7, "COTTAGE CHEESE!!", "#ff2a6d", 1.25);
+        } else if (it.kind === "minnie" || it.kind === "bow") {
+          rainBows(it.x, it.y - it.size * 0.4);
+          addBurst(it.x, it.y - it.size * 0.6, "MINNIE!", "#ff006e");
+        } else if (it.kind === "golden") {
+          addBurst(it.x, it.y - it.size * 0.6, "GOOD DOG!", "#ff9f1c");
+        } else {
+          addBurst(it.x, it.y - it.size * 0.6, BURST_WORDS[Math.floor(rnd() * BURST_WORDS.length)]);
+        }
+      } else {
+        var maxV = 2600;
+        var vx = Math.max(-maxV, Math.min(maxV, drag.vx));
+        var vy = Math.max(-maxV, Math.min(maxV, drag.vy));
+        it.vx = vx / s;
+        it.vy = vy / s;
+        it.flung = 12;
+        it.vRot = Math.max(-4, Math.min(4, vx / 400));
+      }
+    } else if (tapped) {
+      addBurst(x, y, BURST_WORDS[Math.floor(rnd() * BURST_WORDS.length)]);
+    }
+    drag = null;
+  }
+
+  /* ---------- UI: idle fade, shelf, snapshot ---------- */
+  var uiEls = [];
+  var idleTimer = null;
+  var snapBtn = document.getElementById("snap");
+  var shelfBtn = document.getElementById("shelfBtn");
+  var shelf = document.getElementById("shelf");
+  var whisper = document.getElementById("whisper");
+  var toastEl = document.getElementById("toast");
+
+  function setDim(on) {
+    for (var i = 0; i < uiEls.length; i++) {
+      if (on && shelf.classList.contains("open")) return;
+      uiEls[i].classList.toggle("dim", on);
+    }
+  }
+
+  function wakeUI() {
+    setDim(false);
+    if (idleTimer) clearTimeout(idleTimer);
+    idleTimer = setTimeout(function () { setDim(true); }, 4000);
+  }
+
+  var toastTimer = null;
+  function toast(msg) {
+    toastEl.textContent = msg;
+    toastEl.style.display = "block";
+    if (toastTimer) clearTimeout(toastTimer);
+    toastTimer = setTimeout(function () { toastEl.style.display = "none"; }, 3200);
+  }
+
+  function snapWallpaper() {
+    var dpr = window.devicePixelRatio || 1;
+    var tw = Math.round((screen.width || W) * dpr);
+    var th = Math.round((screen.height || H) * dpr);
+    tw = Math.max(320, Math.min(tw, 8192));
+    th = Math.max(320, Math.min(th, 8192));
+    var off = document.createElement("canvas");
+    off.width = tw; off.height = th;
+    var octx = off.getContext("2d");
+    var k = Math.max(tw / W, th / H);
+    octx.save();
+    octx.translate((tw - W * k) / 2, (th - H * k) / 2);
+    octx.scale(k, k);
+    drawScene(octx, W, H, simT);
+    octx.restore();
+    try {
+      off.toBlob(function (blob) {
+        if (!blob) { toast("Couldn't build the image on this browser."); return; }
+        var url = URL.createObjectURL(blob);
+        var a = document.createElement("a");
+        a.href = url;
+        a.download = "cindy-wallpaper.png";
+        document.body.appendChild(a);
+        a.click();
+        document.body.removeChild(a);
+        setTimeout(function () { URL.revokeObjectURL(url); }, 4000);
+        toast("Saved " + tw + "×" + th + " — check your downloads ♥");
+      }, "image/png");
+    } catch (e) {
+      toast("Your browser blocked the save. Try opening this page over http, not from a file.");
+    }
+  }
+
+  /* ---------- loop ---------- */
+  var FRAME = 1 / 30;
+  var acc = 0;
+  var lastNow = 0;
+
+  function frame(now) {
+    requestAnimationFrame(frame);
+    if (!lastNow) lastNow = now;
+    var dt = (now - lastNow) / 1000;
+    lastNow = now;
+    if (dt > 0.5) dt = 0.5;
+    acc += dt;
+    if (acc < FRAME) return;
+    var step = acc;
+    acc = 0;
+    simT += step;
+    update(step, simT);
+    drawScene(ctx, W, H, simT);
+  }
+
+  /* ---------- boot ---------- */
+  function allImagesSettled() {
+    var names = Object.keys(IMAGE_FILES);
+    for (var i = 0; i < names.length; i++) {
+      var img = sprites[names[i]];
+      if (!img.complete) return false;
+    }
+    return true;
+  }
+
+  function whenImagesReady(cb) {
+    if (allImagesSettled()) { spritesReady = true; cb(); return; }
+    var tries = 0;
+    var iv = setInterval(function () {
+      tries++;
+      if (allImagesSettled() || tries > 600) {
+        clearInterval(iv);
+        spritesReady = true;
+        cb();
+      }
+    }, 50);
+  }
+
+  if (RENDER) {
+    document.body.style.overflow = "hidden";
+    var hide = [snapBtn, shelfBtn, shelf, whisper, toastEl];
+    for (var hi = 0; hi < hide.length; hi++) hide[hi].parentNode.removeChild(hide[hi]);
+    resize();
+    seedScene();
+    whenImagesReady(function () {
+      var t = 0;
+      var guard = 0;
+      while (t < RENDER_T && guard < 200000) {
+        var step = Math.min(FRAME, RENDER_T - t);
+        if (step <= 0) break;
+        t += step;
+        update(step, t);
+        guard++;
+      }
+      simT = t;
+      drawScene(ctx, W, H, simT);
+      window.__renderCanvas = canvas;
+      window.__renderDone = true;
+    });
+  } else {
+    uiEls = [snapBtn, shelfBtn, whisper];
+    resize();
+    seedScene();
+
+    window.addEventListener("resize", function () {
+      var prevW = W, prevH = H;
+      resize();
+      // Ignore the small height jitter iOS Safari makes when its chrome slides;
+      // only a real layout change re-seeds the scene.
+      if (Math.abs(prevW - W) > 40 || Math.abs(prevH - H) > 140) seedScene();
+    });
+    window.addEventListener("orientationchange", function () {
+      setTimeout(function () { resize(); seedScene(); }, 250);
+    });
+
+    function localPoint(clientX, clientY) {
+      var r = canvas.getBoundingClientRect();
+      return { x: clientX - r.left, y: clientY - r.top };
+    }
+
+    if ("ontouchstart" in window) {
+      canvas.addEventListener("touchstart", function (e) {
+        e.preventDefault();
+        wakeUI();
+        var t0 = e.changedTouches[0];
+        var p = localPoint(t0.clientX, t0.clientY);
+        pointerDown(p.x, p.y);
+      }, { passive: false });
+      canvas.addEventListener("touchmove", function (e) {
+        e.preventDefault();
+        var t0 = e.changedTouches[0];
+        var p = localPoint(t0.clientX, t0.clientY);
+        pointerMove(p.x, p.y);
+      }, { passive: false });
+      var endTouch = function (e) {
+        e.preventDefault();
+        var t0 = e.changedTouches[0];
+        var p = localPoint(t0.clientX, t0.clientY);
+        pointerUp(p.x, p.y);
+      };
+      canvas.addEventListener("touchend", endTouch, { passive: false });
+      canvas.addEventListener("touchcancel", endTouch, { passive: false });
+    } else {
+      canvas.addEventListener("mousedown", function (e) {
+        wakeUI();
+        var p = localPoint(e.clientX, e.clientY);
+        pointerDown(p.x, p.y);
+      });
+      window.addEventListener("mousemove", function (e) {
+        wakeUI();
+        var p = localPoint(e.clientX, e.clientY);
+        pointerMove(p.x, p.y);
+      });
+      window.addEventListener("mouseup", function (e) {
+        var p = localPoint(e.clientX, e.clientY);
+        pointerUp(p.x, p.y);
+      });
+    }
+
+    document.addEventListener("touchmove", function (e) {
+      if (shelf.contains(e.target)) return;
+      e.preventDefault();
+    }, { passive: false });
+    document.addEventListener("gesturestart", function (e) { e.preventDefault(); }, { passive: false });
+    document.addEventListener("contextmenu", function (e) { e.preventDefault(); });
+
+    snapBtn.addEventListener("click", function (e) {
+      e.stopPropagation();
+      wakeUI();
+      snapWallpaper();
+    });
+    shelfBtn.addEventListener("click", function (e) {
+      e.stopPropagation();
+      shelf.classList.toggle("open");
+      shelf.classList.remove("dim");
+      wakeUI();
+    });
+
+    wakeUI();
+    requestAnimationFrame(frame);
+  }
+})();
+</script>
+</body>
+</html>

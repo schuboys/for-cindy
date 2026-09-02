@@ -1,0 +1,20 @@
+[package]
+name = "cindy-drift"
+version = "0.1.0"
+edition = "2021"
+
+[[bin]]
+name = "CindyDrift"
+path = "src/main.rs"
+
+[dependencies]
+winit = "0.30"
+softbuffer = "0.4"
+image = { version = "0.25", default-features = false, features = ["png"] }
+
+[profile.release]
+opt-level = "s"
+lto = true
+codegen-units = 1
+panic = "abort"
+strip = true
