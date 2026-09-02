@@ -18,7 +18,7 @@ use winit::event::{DeviceEvent, DeviceId, ElementState, WindowEvent};
 use winit::event_loop::{ActiveEventLoop, ControlFlow, EventLoop};
 use winit::window::{Fullscreen, Window, WindowId, WindowLevel};
 
-const FRAME: Duration = Duration::from_millis(33); // ~30fps
+const FRAME: Duration = Duration::from_micros(16_667); // ~60fps
 /// Cumulative pointer travel, in pixels, that counts as "the user is back".
 const MOUSE_EXIT_PX: f64 = 5.0;
 
@@ -183,7 +183,12 @@ impl ApplicationHandler for App {
             }
             WindowEvent::RedrawRequested => {
                 self.draw();
-                self.next_frame = Some(Instant::now() + FRAME);
+                // Pace from the deadline we just met, not from now, so a slow
+                // frame does not compound into a slower cadence. If we fall
+                // more than a frame behind, drop the backlog.
+                let now = Instant::now();
+                let next = self.next_frame.unwrap_or(now) + FRAME;
+                self.next_frame = Some(if next < now { now + FRAME } else { next });
             }
             _ => {}
         }

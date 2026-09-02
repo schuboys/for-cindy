@@ -36,6 +36,8 @@ struct Item {
     wobble: f32,
     phase: f32,
     pulse: f32,
+    pulse_freq: f32,
+    pulse_amp: f32,
 }
 
 struct Star {
@@ -127,13 +129,15 @@ impl Scene {
                 x: self.rng.range(0.0, w),
                 y: self.rng.range(0.0, h * 0.85) + h * 0.08,
                 size: self.rng.range(110.0, 200.0) * s,
-                vx: self.rng.range(10.0, 32.0) * self.rng.sign(),
-                vy: self.rng.range(6.0, 20.0) * self.rng.sign(),
+                vx: self.rng.range(6.0, 40.0) * self.rng.sign(),
+                vy: self.rng.range(4.0, 24.0) * self.rng.sign(),
                 rot: self.rng.range(-0.3, 0.3),
-                v_rot: self.rng.range(-0.22, 0.22),
-                wobble: self.rng.range(0.8, 2.2),
+                v_rot: self.rng.range(-0.35, 0.35),
+                wobble: self.rng.range(0.5, 2.7),
                 phase: self.rng.range(0.0, std::f32::consts::TAU),
                 pulse: 1.0,
+                pulse_freq: self.rng.range(1.6, 4.4),
+                pulse_amp: self.rng.range(0.08, 0.16),
             })
             .collect();
 
@@ -207,7 +211,7 @@ impl Scene {
             item.x += item.vx * dt * s;
             item.y += item.vy * dt * s + (t * item.wobble + item.phase).sin() * 0.5 * s;
             item.rot += item.v_rot * dt;
-            item.pulse = 1.0 + 0.12 * (t * 3.5 + item.phase).sin();
+            item.pulse = 1.0 + item.pulse_amp * (t * item.pulse_freq + item.phase).sin();
 
             let margin = item.size * 0.6;
             if item.x > w + margin {
@@ -227,7 +231,7 @@ impl Scene {
             c.x += c.vx * dt * s;
             c.y += c.vy * dt * s + (t * c.wobble + c.phase).sin() * 0.4 * s;
             c.rot += c.v_rot * dt;
-            c.pulse = 1.0 + 0.1 * (t * 3.0 + c.phase).sin();
+            c.pulse = 1.0 + c.pulse_amp * (t * c.pulse_freq + c.phase).sin();
             let margin = c.size * 1.2;
             gone = c.x > w + margin || c.x < -margin;
         }
@@ -246,10 +250,12 @@ impl Scene {
                 vx: self.rng.range(26.0, 44.0) * if leftward { -1.0 } else { 1.0 },
                 vy: self.rng.range(-6.0, 6.0),
                 rot: self.rng.range(-0.2, 0.2),
-                v_rot: self.rng.range(-0.3, 0.3),
-                wobble: self.rng.range(0.8, 1.8),
+                v_rot: self.rng.range(-0.35, 0.35),
+                wobble: self.rng.range(0.5, 2.2),
                 phase: self.rng.range(0.0, std::f32::consts::TAU),
                 pulse: 1.0,
+                pulse_freq: self.rng.range(1.6, 4.4),
+                pulse_amp: self.rng.range(0.08, 0.16),
             });
         }
     }
@@ -375,9 +381,9 @@ mod tests {
         let (w, h) = (960usize, 540usize);
         let mut scene = Scene::new(w, h, 42);
         let mut buf = vec![0u32; w * h];
-        for i in 0..90 {
-            let t = i as f32 / 30.0;
-            scene.update(t, 1.0 / 30.0);
+        for i in 0..180 {
+            let t = i as f32 / 60.0;
+            scene.update(t, 1.0 / 60.0);
             scene.render(&mut buf, t);
         }
         // The sky alone would already be many colours; assert the frame is
@@ -398,5 +404,25 @@ mod tests {
             )
             .unwrap();
         }
+    }
+
+    #[test]
+    fn items_pulse_and_drift_at_their_own_speeds() {
+        let scene = Scene::new(960, 540, 42);
+        let freqs: Vec<f32> = scene.items.iter().map(|i| i.pulse_freq).collect();
+        let amps: Vec<f32> = scene.items.iter().map(|i| i.pulse_amp).collect();
+        let speeds: Vec<f32> = scene.items.iter().map(|i| i.vx.abs()).collect();
+
+        assert!(freqs.iter().all(|f| (1.6..=4.4).contains(f)));
+        assert!(amps.iter().all(|a| (0.08..=0.16).contains(a)));
+        assert!(spread(&freqs) > 1.0, "pulse frequencies too uniform");
+        assert!(spread(&amps) > 0.03, "pulse amplitudes too uniform");
+        assert!(spread(&speeds) > 15.0, "drift speeds too uniform");
+    }
+
+    fn spread(v: &[f32]) -> f32 {
+        let lo = v.iter().copied().fold(f32::INFINITY, f32::min);
+        let hi = v.iter().copied().fold(f32::NEG_INFINITY, f32::max);
+        hi - lo
     }
 }

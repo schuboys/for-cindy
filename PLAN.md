@@ -149,3 +149,61 @@ sprites have real transparency.
 
 Rules: no silent deviation — stop and ask. Corey eyeballs aesthetics; agents
 verify only mechanics. Do not touch ambient-display.
+
+---
+
+# Round 2 — Corey's feedback (2026-09-02)
+
+Approved changes, in order:
+
+## Phase 7 — Variant arrays + Disney category + burst redesign  (executor)
+
+Edit web/index.html only.
+
+1. **Variant arrays.** Replace the one-file-per-kind sprite model with a
+   literal manifest of categories, each an ARRAY of image files. An item
+   spawning in a category picks a variant uniformly (seeded RNG). Categories:
+   - `coke`: [coke.png, + coke2.png if sourced]
+   - `cotton`: [cotton.png]
+   - `disney`: [disney.png (castle), minnie.png, minnie2.png, ears1.png,
+     ears2.png, bow.png] — Minnie is generalized to Disney; the bow joins it.
+     Bow-rain trigger: tapping ANY disney-category item rains bows.
+   - `candy`: [candy1.png, candy2.png, candy3.png] — the candy PIECES replace
+     the app icon (drop candy.png from the drift). Candy pieces render
+     smaller than other sprites (they're game tokens, ~60-70% normal size).
+   - `golden`: [golden.png, golden2.png, golden3.png]
+   - `tiktok`: [tiktok.png]
+   Keep 16-18 items with a spread across categories (weight disney and
+   golden a bit higher — they're her favorites). The manifest must be a
+   single obvious block at the top of the script with a comment telling
+   Corey how to add his own curated files (drop PNG in assets/, add filename
+   to the array).
+2. **Burst redesign — old-school Batman starburst, rare and subtle.**
+   - Shape: irregular spiky comic starburst polygon (11-14 points, alternating
+     outer/inner radii with seeded jitter), NOT an ellipse. Flat saturated
+     fill, thick white outline plus offset black outline underneath for the
+     classic print look, slight rotation (±10°). Bold slanted uppercase text.
+   - Cadence: ambient bursts every 25-45 s (was ~0.7-2 s), one on screen at
+     a time, smaller than before (max ~12% of H), pop-in scale then gentle
+     fade over ~2.5 s. Subtle > loud.
+   - Ambient word pool = loving only: LOVE YOU! · SO LOVED! · MISS YOU! ·
+     XOXO! · FILLS MY SOUL! · HUGS! (drop ATL ✈, YUM!, LIKE!, OMG!, WOW!,
+     SWEET!, YAY! from ambient).
+   - Tap-triggered bursts keep the new visual style; tap word pool = the
+     loving pool + classic POP! BAM! (her own taps can be playful), plus the
+     contextual GOOD DOG! (golden), MINNIE! (disney), COTTAGE CHEESE!!
+     (easter egg) unchanged.
+   - Render/headless mode: still zero bursts (unchanged gate).
+3. Everything else (drag/fling, cottage cheese, snap, shelf, headless
+   determinism contract) unchanged.
+
+## Phase 8 — Re-render media + republish  (mech-executor, then main session)
+
+Re-run wallpapers (same chosen seeds), stills, seamless videos with the new
+sprite mix (tools/ scripts exist: make_wallpapers_fixed.js, make_stills.js,
+make_video_frames_480.js + build_seamless.sh); rebuild zips; mirror into
+web/downloads/ (CindyDrift.scr untouched). Main session commits, pushes
+main + gh-pages, rebuilds + republishes the artifact variant.
+
+The .scr keeps the old single-image set for now — updating it is a later
+round once Corey has curated final images.
