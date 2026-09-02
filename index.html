@@ -183,33 +183,82 @@
 
   var rnd = mulberry32(SEED);
 
-  /* ---------- sprites ---------- */
-  var IMAGE_FILES = {
-    coke: "./assets/coke.png",
-    cotton: "./assets/cotton.png",
-    disney: "./assets/disney.png",
-    candy: "./assets/candy.png",
-    tiktok: "./assets/tiktok.png",
-    minnie: "./assets/minnie.png",
-    bow: "./assets/bow.png",
-    golden: "./assets/golden.png",
-    cottage: "./assets/cottage.png"
+  /* =====================================================================
+     THE SPRITE MANIFEST — this is the only block you need to edit, Corey.
+
+     To add art: drop the PNG (transparent background) into web/assets/
+     and add its filename to one of the arrays below. Nothing else to
+     change — the drift picks it up on the next page load, and an item
+     spawning in that category picks one of its files at random.
+     To retire art: delete the filename from the array.
+
+     WEIGHTS below say how many of the ~17 drifting items come from each
+     category (disney and golden run heavier — they're her favorites).
+
+     Note: the wallpapers / stills / .mp4 files under web/downloads/ are
+     pre-rendered snapshots. Editing this manifest changes the live page
+     immediately; the downloads only change when those are re-rendered.
+     ===================================================================== */
+  var CATEGORIES = {
+    coke:   ["coke.png"],
+    cotton: ["cotton.png"],
+    disney: ["disney.png", "minnie.png", "minnie2.png", "ears1.png", "ears2.png", "bow.png"],
+    candy:  ["candy1.png", "candy2.png", "candy3.png", "candy4.png", "candy5.png", "candy6.png"],
+    golden: ["golden.png", "golden2.png"],
+    tiktok: ["tiktok.png"]
   };
-  var KINDS = ["coke", "cotton", "disney", "candy", "tiktok", "minnie", "bow", "golden"];
+  var CATEGORY_WEIGHTS = {
+    disney: 5,
+    candy: 4,
+    golden: 3,
+    coke: 2,
+    cotton: 2,
+    tiktok: 1
+  };
+  var BOW_FILE = "bow.png";        // rained down when a disney item is tapped
+  var COTTAGE_FILE = "cottage.png"; // the rare easter-egg drifter
+  /* ===================== end of the manifest ========================== */
+
+  // candy pieces are game tokens — they read better a bit smaller
+  var CATEGORY_SCALE = { candy: 0.65 };
+
+  var ASSET_DIR = "./assets/";
+  var ALL_FILES = (function () {
+    var seen = {}, out = [];
+    Object.keys(CATEGORIES).forEach(function (cat) {
+      CATEGORIES[cat].forEach(function (f) {
+        if (!seen[f]) { seen[f] = 1; out.push(f); }
+      });
+    });
+    [BOW_FILE, COTTAGE_FILE].forEach(function (f) {
+      if (!seen[f]) { seen[f] = 1; out.push(f); }
+    });
+    return out;
+  })();
+
+  // the per-item category roster, expanded from the weights above
+  var SPAWN_PLAN = (function () {
+    var plan = [];
+    Object.keys(CATEGORIES).forEach(function (cat) {
+      var n = CATEGORY_WEIGHTS[cat] || 1;
+      for (var i = 0; i < n; i++) plan.push(cat);
+    });
+    return plan;
+  })();
+
   var sprites = {};
   var spritesReady = false;
   (function loadImages() {
-    var names = Object.keys(IMAGE_FILES);
-    var pending = names.length;
-    names.forEach(function (kind) {
+    var pending = ALL_FILES.length;
+    ALL_FILES.forEach(function (file) {
       var img = new Image();
       img.decoding = "sync";
       img.onload = img.onerror = function () {
         pending--;
         if (pending === 0) spritesReady = true;
       };
-      img.src = IMAGE_FILES[kind];
-      sprites[kind] = img;
+      img.src = ASSET_DIR + file;
+      sprites[file] = img;
     });
   })();
 
@@ -218,10 +267,10 @@
   }
 
   /* ---------- words + colors ---------- */
-  var BURST_WORDS = [
-    "BAM!", "POP!", "WOW!", "SWEET!", "YUM!", "LIKE!", "OMG!", "YAY!",
-    "LOVE YOU!", "ATL ✈", "FILLS MY SOUL", "MINNIE!", "GOOD DOG!"
+  var AMBIENT_WORDS = [
+    "LOVE YOU!", "SO LOVED!", "MISS YOU!", "XOXO!", "FILLS MY SOUL!", "HUGS!"
   ];
+  var TAP_WORDS = AMBIENT_WORDS.concat(["POP!", "BAM!"]);
   var BURST_COLORS = ["#ff2a6d", "#05d9e8", "#ff9f1c", "#7b2cbf", "#ff006e"];
   var CONFETTI_COLORS = ["#ff2a6d", "#ffd166", "#05d9e8", "#7b2cbf", "#ffffff", "#ff9f1c"];
   var STAR_COLORS = ["#ffd6e8", "#fff7ad", "#b3f0ff", "#e8b3f0"];
@@ -232,13 +281,10 @@
     disney: "rgba(120, 80, 220, 0.55)",
     candy: "rgba(255, 170, 0, 0.55)",
     tiktok: "rgba(5, 217, 232, 0.55)",
-    minnie: "rgba(255, 60, 110, 0.55)",
-    bow: "rgba(255, 40, 90, 0.55)",
     golden: "rgba(255, 180, 90, 0.55)",
     cottage: "rgba(120, 190, 255, 0.5)"
   };
 
-  var ITEM_COUNT = 18;
   var SWIRL_SPEED = 0.04;
 
   /* ---------- state ---------- */
@@ -257,25 +303,30 @@
   function seedScene() {
     var s = scaleOf();
     items = [];
-    for (var i = 0; i < ITEM_COUNT; i++) {
-      var kind = KINDS[i % KINDS.length];
+    for (var i = 0; i < SPAWN_PLAN.length; i++) {
+      var cat = SPAWN_PLAN[i];
+      var files = CATEGORIES[cat];
+      var file = files[Math.floor(rnd() * files.length)];
       items.push({
-        kind: kind,
+        cat: cat,
+        file: file,
         x: rnd() * W,
         y: rnd() * H * 0.85 + H * 0.08,
-        size: (110 + rnd() * 90) * s,
-        vx: (10 + rnd() * 22) * (rnd() < 0.5 ? 1 : -1),
-        vy: (6 + rnd() * 14) * (rnd() < 0.5 ? 1 : -1),
+        size: (110 + rnd() * 90) * s * (CATEGORY_SCALE[cat] || 1),
+        vx: (6 + rnd() * 34) * (rnd() < 0.5 ? 1 : -1),
+        vy: (4 + rnd() * 20) * (rnd() < 0.5 ? 1 : -1),
         rot: (rnd() - 0.5) * 0.6,
-        vRot: (rnd() - 0.5) * 0.45,
-        wobble: 0.8 + rnd() * 1.4,
+        vRot: (rnd() - 0.5) * 0.7,
+        wobble: 0.5 + rnd() * 2.2,
         phase: rnd() * Math.PI * 2,
+        pulseFreq: 1.6 + rnd() * 2.8,
+        pulseAmp: 0.08 + rnd() * 0.08,
         pulse: 1,
         pop: 0,
         sx: 1, sy: 1,
         flung: 0,
         dragging: false,
-        shadow: SHADOWS[kind]
+        shadow: SHADOWS[cat]
       });
     }
     stars = [];
@@ -300,7 +351,7 @@
     }
     bursts = []; bows = []; confetti = [];
     cottage = null;
-    nextBurst = 0;
+    nextBurst = simT + BURST_GAP_MIN + rnd() * BURST_GAP_SPAN;
     nextCottage = simT + 90 + rnd() * 90;
   }
 
@@ -357,24 +408,49 @@
 
   var FONT_STACK = 'system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif';
 
+  /* Old-school Batman starburst: an irregular spiky polygon, flat saturated
+     fill, thick white outline over an offset black one, slanted bold caps. */
+  var BURST_LIFE = 2.5;
+  var BURST_GAP_MIN = 25;
+  var BURST_GAP_SPAN = 20;
+
+  function starburstPoints(rx, ry) {
+    var spikes = 11 + Math.floor(rnd() * 4); // 11-14
+    var pts = [];
+    for (var i = 0; i < spikes * 2; i++) {
+      var a = (i / (spikes * 2)) * Math.PI * 2;
+      var base = (i % 2 === 0) ? 1 : 0.6;
+      var jitter = 1 + (rnd() - 0.5) * 0.26;
+      pts.push({ x: Math.cos(a) * rx * base * jitter, y: Math.sin(a) * ry * base * jitter });
+    }
+    return pts;
+  }
+
   function addBurst(x, y, text, color, boost) {
     var s = scaleOf();
-    var fontSize = 32 * s * (boost || 1);
+    text = String(text).toUpperCase();
+    var fontSize = 26 * s * (boost || 1);
     if (text.length > 8) fontSize *= Math.max(0.62, 8 / text.length);
     var textW = measureBurst(text, fontSize);
+    var rx = textW / 2 + 34 * s;
+    var ry = fontSize * 1.15;
+    // never taller than ~12% of the screen
+    var maxRy = H * 0.055;
+    if (ry > maxRy) {
+      var k = maxRy / ry;
+      rx *= k; ry *= k; fontSize *= k;
+    }
     bursts.push({
       x: x, y: y,
       text: text,
       color: color || BURST_COLORS[Math.floor(rnd() * BURST_COLORS.length)],
-      w: textW / 2 + 26 * s,
-      h: fontSize * 0.92,
+      pts: starburstPoints(rx, ry),
       fontSize: fontSize,
-      rot: (rnd() - 0.5) * 0.6,
-      maxScale: 1.4 + rnd() * 0.6,
-      life: 1.2,
-      maxLife: 1.2
+      rot: (rnd() - 0.5) * (Math.PI / 9), // ±10°
+      life: BURST_LIFE,
+      maxLife: BURST_LIFE
     });
-    if (bursts.length > 24) bursts.splice(0, bursts.length - 24);
+    if (bursts.length > 6) bursts.splice(0, bursts.length - 6);
   }
 
   function rainBows(x, y) {
@@ -422,7 +498,8 @@
     var fromLeft = rnd() < 0.5;
     var size = Math.min(90 * s, W * 0.18);
     cottage = {
-      kind: "cottage",
+      cat: "cottage",
+      file: COTTAGE_FILE,
       x: fromLeft ? -size : W + size,
       y: H * (0.2 + rnd() * 0.6),
       size: size,
@@ -430,8 +507,10 @@
       vy: (rnd() - 0.5) * 8,
       rot: (rnd() - 0.5) * 0.4,
       vRot: (rnd() - 0.5) * 0.5,
-      wobble: 0.9 + rnd() * 1.2,
+      wobble: 0.6 + rnd() * 1.8,
       phase: rnd() * Math.PI * 2,
+      pulseFreq: 1.6 + rnd() * 2.8,
+      pulseAmp: 0.08 + rnd() * 0.08,
       pulse: 1,
       pop: 0,
       sx: 1, sy: 1,
@@ -455,7 +534,7 @@
     item.x += item.vx * dt * s;
     item.y += item.vy * dt * s + Math.sin(t * item.wobble + item.phase) * 0.5 * s;
     item.rot += item.vRot * dt;
-    item.pulse = 1 + 0.12 * Math.sin(t * 3.5 + item.phase);
+    item.pulse = 1 + (item.pulseAmp || 0.12) * Math.sin(t * (item.pulseFreq || 3.5) + item.phase);
     if (item.pop > 0) item.pop = Math.max(0, item.pop - dt * 2.2);
     item.sx += (1 - item.sx) * Math.min(1, dt * 8);
     item.sy += (1 - item.sy) * Math.min(1, dt * 8);
@@ -484,7 +563,7 @@
         cottage.x += cottage.vx * dt * s;
         cottage.y += cottage.vy * dt * s + Math.sin(t * cottage.wobble + cottage.phase) * 0.4 * s;
         cottage.rot += cottage.vRot * dt;
-        cottage.pulse = 1 + 0.12 * Math.sin(t * 3.5 + cottage.phase);
+        cottage.pulse = 1 + (cottage.pulseAmp || 0.12) * Math.sin(t * (cottage.pulseFreq || 3.5) + cottage.phase);
         if (cottage.pop > 0) cottage.pop = Math.max(0, cottage.pop - dt * 2.2);
         cottage.sx += (1 - cottage.sx) * Math.min(1, dt * 8);
         cottage.sy += (1 - cottage.sy) * Math.min(1, dt * 8);
@@ -496,18 +575,18 @@
       nextCottage = t + 90 + rnd() * 90;
     }
 
-    // ambient bursts
-    if (!RENDER && spritesReady && t > nextBurst) {
+    // ambient bursts — rare, and only ever one on screen at a time
+    if (!RENDER && spritesReady && t > nextBurst && bursts.length === 0) {
       var anchor = items[Math.floor(rnd() * items.length)];
       if (anchor) {
         addBurst(
           anchor.x + (rnd() - 0.5) * 80 * s,
           anchor.y - anchor.size * 0.6 - (20 + rnd() * 40) * s,
-          BURST_WORDS[Math.floor(rnd() * BURST_WORDS.length)],
+          AMBIENT_WORDS[Math.floor(rnd() * AMBIENT_WORDS.length)],
           BURST_COLORS[Math.floor(rnd() * BURST_COLORS.length)]
         );
       }
-      nextBurst = t + 0.7 + rnd() * 1.3;
+      nextBurst = t + BURST_GAP_MIN + rnd() * BURST_GAP_SPAN;
     }
     for (var b = bursts.length - 1; b >= 0; b--) {
       bursts[b].life -= dt;
@@ -556,8 +635,15 @@
     c.fill();
   }
 
+  function tracePoints(c, pts) {
+    c.beginPath();
+    c.moveTo(pts[0].x, pts[0].y);
+    for (var i = 1; i < pts.length; i++) c.lineTo(pts[i].x, pts[i].y);
+    c.closePath();
+  }
+
   function drawItem(c, item, s) {
-    var sprite = sprites[item.kind];
+    var sprite = sprites[item.file];
     if (!usable(sprite)) return;
     var pop = 1 + 0.35 * Math.sin(Math.PI * Math.min(1, item.pop));
     var sw = item.size;
@@ -624,7 +710,7 @@
     if (cottage) drawItem(c, cottage, s);
 
     // falling bows
-    var bowSprite = sprites.bow;
+    var bowSprite = sprites[BOW_FILE];
     if (usable(bowSprite)) {
       for (var bi = 0; bi < bows.length; bi++) {
         var bw = bows[bi];
@@ -652,30 +738,47 @@
     }
     c.globalAlpha = 1;
 
-    // comic bursts
+    // comic starbursts
     for (var bu = 0; bu < bursts.length; bu++) {
       var b = bursts[bu];
-      var life = b.life / b.maxLife;
-      var scale = Math.sin((1 - life) * Math.PI * 0.9) * b.maxScale;
+      var age = b.maxLife - b.life;
+      var scale = age < 0.28
+        ? (age < 0.2 ? (age / 0.2) * 1.14 : 1.14 + ((age - 0.2) / 0.08) * -0.14)
+        : 1;
       c.save();
       c.translate(b.x, b.y);
       c.scale(scale, scale);
       c.rotate(b.rot);
-      c.globalAlpha = Math.max(0, life);
-      c.fillStyle = b.color;
-      c.beginPath();
-      c.ellipse(0, 0, b.w, b.h, 0, 0, Math.PI * 2);
+      c.globalAlpha = Math.max(0, Math.min(1, b.life / 1.4));
+
+      // offset black plate — the classic mis-registered print look
+      c.save();
+      c.translate(5 * s, 6 * s);
+      tracePoints(c, b.pts);
+      c.fillStyle = "#12060f";
       c.fill();
+      c.restore();
+
+      // white outline, then the flat saturated fill
+      tracePoints(c, b.pts);
       c.strokeStyle = "#ffffff";
-      c.lineWidth = 5 * s;
+      c.lineJoin = "miter";
+      c.miterLimit = 4;
+      c.lineWidth = 9 * s;
       c.stroke();
-      c.fillStyle = "#ffffff";
+      c.fillStyle = b.color;
+      c.fill();
+
+      // bold slanted caps
+      c.transform(1, 0, -0.18, 1, 0, 0);
       c.font = "900 " + b.fontSize + "px " + FONT_STACK;
       c.textAlign = "center";
       c.textBaseline = "middle";
-      c.strokeStyle = "rgba(0,0,0,0.25)";
-      c.lineWidth = 3 * s;
+      c.strokeStyle = "rgba(18,6,15,0.9)";
+      c.lineWidth = 4 * s;
+      c.lineJoin = "round";
       c.strokeText(b.text, 0, 0);
+      c.fillStyle = "#ffffff";
       c.fillText(b.text, 0, 0);
       c.restore();
     }
@@ -721,7 +824,7 @@
     var best = null, bestD = Infinity;
     for (var i = candidates.length - 1; i >= 0; i--) {
       var it = candidates[i];
-      var sprite = sprites[it.kind];
+      var sprite = sprites[it.file];
       var sw = it.size * it.pulse;
       var sh = spriteHeightFor(sprite, it.size) * it.pulse;
       var r = Math.max(sw, sh) * 0.5;
@@ -780,16 +883,16 @@
       it.dragging = false;
       if (tapped) {
         it.pop = 1;
-        if (it.kind === "cottage") {
+        if (it.cat === "cottage") {
           eruptConfetti(it.x, it.y);
           addBurst(it.x, it.y - it.size * 0.7, "COTTAGE CHEESE!!", "#ff2a6d", 1.25);
-        } else if (it.kind === "minnie" || it.kind === "bow") {
+        } else if (it.cat === "disney") {
           rainBows(it.x, it.y - it.size * 0.4);
           addBurst(it.x, it.y - it.size * 0.6, "MINNIE!", "#ff006e");
-        } else if (it.kind === "golden") {
+        } else if (it.cat === "golden") {
           addBurst(it.x, it.y - it.size * 0.6, "GOOD DOG!", "#ff9f1c");
         } else {
-          addBurst(it.x, it.y - it.size * 0.6, BURST_WORDS[Math.floor(rnd() * BURST_WORDS.length)]);
+          addBurst(it.x, it.y - it.size * 0.6, TAP_WORDS[Math.floor(rnd() * TAP_WORDS.length)]);
         }
       } else {
         var maxV = 2600;
@@ -801,7 +904,7 @@
         it.vRot = Math.max(-4, Math.min(4, vx / 400));
       }
     } else if (tapped) {
-      addBurst(x, y, BURST_WORDS[Math.floor(rnd() * BURST_WORDS.length)]);
+      addBurst(x, y, TAP_WORDS[Math.floor(rnd() * TAP_WORDS.length)]);
     }
     drag = null;
   }
@@ -870,31 +973,26 @@
   }
 
   /* ---------- loop ---------- */
+  /* Live: uncapped — runs at the display's native rAF rate (60/120Hz).
+     FRAME is only the fixed step for the deterministic headless render path. */
   var FRAME = 1 / 30;
-  var acc = 0;
   var lastNow = 0;
 
   function frame(now) {
     requestAnimationFrame(frame);
-    if (!lastNow) lastNow = now;
+    if (!lastNow) { lastNow = now; return; }
     var dt = (now - lastNow) / 1000;
     lastNow = now;
-    if (dt > 0.5) dt = 0.5;
-    acc += dt;
-    if (acc < FRAME) return;
-    var step = acc;
-    acc = 0;
-    simT += step;
-    update(step, simT);
+    if (dt > 0.1) dt = 0.1;
+    simT += dt;
+    update(dt, simT);
     drawScene(ctx, W, H, simT);
   }
 
   /* ---------- boot ---------- */
   function allImagesSettled() {
-    var names = Object.keys(IMAGE_FILES);
-    for (var i = 0; i < names.length; i++) {
-      var img = sprites[names[i]];
-      if (!img.complete) return false;
+    for (var i = 0; i < ALL_FILES.length; i++) {
+      if (!sprites[ALL_FILES[i]].complete) return false;
     }
     return true;
   }
