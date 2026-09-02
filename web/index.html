@@ -497,7 +497,7 @@
     }
 
     // ambient bursts
-    if (spritesReady && t > nextBurst) {
+    if (!RENDER && spritesReady && t > nextBurst) {
       var anchor = items[Math.floor(rnd() * items.length)];
       if (anchor) {
         addBurst(
