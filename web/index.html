@@ -212,6 +212,7 @@
     var m = /^(\d{2,5})x(\d{2,5})$/.exec(renderParam.trim());
     if (m) RENDER = { w: parseInt(m[1], 10), h: parseInt(m[2], 10) };
   }
+  var EMBED = params.get("embed") === "1";
   var SEED = parseInt(params.get("seed") || "1", 10);
   if (!isFinite(SEED)) SEED = 1;
   var RENDER_T = parseFloat(params.get("t") || "0");
@@ -1077,6 +1078,7 @@
      FRAME is only the fixed step for the deterministic headless render path. */
   var FRAME = 1 / 30;
   var lastNow = 0;
+  var paused = false;
 
   function frame(now) {
     requestAnimationFrame(frame);
@@ -1084,11 +1086,35 @@
     var dt = (now - lastNow) / 1000;
     lastNow = now;
     if (dt > 0.1) dt = 0.1;
-    simT += dt;
-    update(dt, simT);
-    discoTick(dt);
+    if (!paused) {
+      simT += dt;
+      update(dt, simT);
+      discoTick(dt);
+    }
     drawScene(ctx, W, H, simT);
   }
+
+  /* Parent-page API for the /gift device frames (same-origin iframes).
+     Pausing freezes the drift but keeps drawing, so dragging still
+     repositions items — pointerMove writes x/y directly. */
+  window.__cindyGift = {
+    setPaused: function (p) { paused = !!p; },
+    isPaused: function () { return paused; },
+    snapCanvas: function (tw, th) {
+      tw = Math.max(320, Math.min(tw | 0, 8192));
+      th = Math.max(320, Math.min(th | 0, 8192));
+      var off = document.createElement("canvas");
+      off.width = tw; off.height = th;
+      var octx = off.getContext("2d");
+      var k = Math.max(tw / W, th / H);
+      octx.save();
+      octx.translate((tw - W * k) / 2, (th - H * k) / 2);
+      octx.scale(k, k);
+      drawScene(octx, W, H, simT);
+      octx.restore();
+      return off;
+    }
+  };
 
   /* ---------- boot ---------- */
   function allImagesSettled() {
@@ -1134,6 +1160,11 @@
     });
   } else {
     uiEls = [snapBtn, shelfBtn, whisper];
+    if (EMBED) {
+      uiEls = [];
+      var eh = [snapBtn, shelfBtn, shelf, whisper];
+      for (var ei = 0; ei < eh.length; ei++) eh[ei].parentNode.removeChild(eh[ei]);
+    }
     resize();
     seedScene();
 
