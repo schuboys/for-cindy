@@ -1,35 +1,130 @@
 //! The embedded artwork. Every PNG ships inside the .scr — the screensaver
 //! never touches the disk or the network once installed.
+//!
+//! The roster mirrors the manifest at the top of `web/index.html`: the same
+//! seven categories, the same variant files, the same spawn weights.
 
 use image::imageops::FilterType;
 use image::GenericImageView;
 
 use crate::raster::{blur_alpha, Tex};
 
-pub const CANDY: &[u8] = include_bytes!("../../assets/original/candy.png");
-pub const COKE: &[u8] = include_bytes!("../../assets/original/coke.png");
-pub const COTTON: &[u8] = include_bytes!("../../assets/original/cotton.png");
-pub const DISNEY: &[u8] = include_bytes!("../../assets/original/disney.png");
-pub const TIKTOK: &[u8] = include_bytes!("../../assets/original/tiktok.png");
-pub const MINNIE: &[u8] = include_bytes!("../../assets/new/minnie.png");
-pub const BOW: &[u8] = include_bytes!("../../assets/new/bow.png");
-pub const GOLDEN: &[u8] = include_bytes!("../../assets/new/golden.png");
-pub const COTTAGE: &[u8] = include_bytes!("../../assets/new/cottage.png");
+macro_rules! asset {
+    ($file:literal) => {
+        include_bytes!(concat!("../../web/assets/", $file))
+    };
+}
 
-/// The eight regular drifters, with the drop-shadow tint the original scene
-/// used for each one.
-pub const DRIFTERS: [(&[u8], (f32, f32, f32)); 8] = [
-    (CANDY, (255.0, 170.0, 0.0)),
-    (COKE, (255.0, 30.0, 80.0)),
-    (COTTON, (255.0, 120.0, 220.0)),
-    (DISNEY, (120.0, 80.0, 220.0)),
-    (TIKTOK, (5.0, 217.0, 232.0)),
-    (MINNIE, (255.0, 60.0, 120.0)),
-    (BOW, (255.0, 90.0, 150.0)),
-    (GOLDEN, (255.0, 190.0, 90.0)),
+/// One of the seven favorites, with every variant the web page can draw for it.
+pub struct Category {
+    /// The manifest key in `web/index.html`; carried so the two stay legible
+    /// side by side.
+    #[allow(dead_code)]
+    pub name: &'static str,
+    pub variants: &'static [&'static [u8]],
+    /// The drop-shadow tint the original scene used for this category.
+    pub shadow: (f32, f32, f32),
+    /// How many of the drifters on screen belong to this category.
+    pub weight: usize,
+    /// Size multiplier — candy pieces read better a bit smaller.
+    pub scale: f32,
+}
+
+pub const CATEGORIES: [Category; 7] = [
+    Category {
+        name: "coke",
+        variants: &[asset!("coke.png")],
+        shadow: (255.0, 30.0, 80.0),
+        weight: 2,
+        scale: 1.0,
+    },
+    Category {
+        name: "cotton",
+        variants: &[asset!("cotton.png")],
+        shadow: (255.0, 120.0, 220.0),
+        weight: 2,
+        scale: 1.0,
+    },
+    Category {
+        name: "disney",
+        variants: &[
+            asset!("disney.png"),
+            asset!("minnie.png"),
+            asset!("minnie2.png"),
+            asset!("minnie3.png"),
+            asset!("minnie4.png"),
+            asset!("mickey.png"),
+            asset!("castle2.png"),
+            asset!("ears1.png"),
+            asset!("ears2.png"),
+            asset!("bow.png"),
+        ],
+        shadow: (120.0, 80.0, 220.0),
+        weight: 5,
+        scale: 1.0,
+    },
+    Category {
+        name: "candy",
+        variants: &[
+            asset!("candy1.png"),
+            asset!("candy2.png"),
+            asset!("candy3.png"),
+            asset!("candy4.png"),
+            asset!("candy5.png"),
+            asset!("candy6.png"),
+        ],
+        shadow: (255.0, 170.0, 0.0),
+        weight: 3,
+        scale: 0.65,
+    },
+    Category {
+        name: "golden",
+        variants: &[
+            asset!("golden.png"),
+            asset!("golden2.png"),
+            asset!("golden3.png"),
+            asset!("golden4.png"),
+            asset!("golden5.png"),
+        ],
+        shadow: (255.0, 180.0, 90.0),
+        weight: 3,
+        scale: 1.0,
+    },
+    Category {
+        name: "cookies",
+        variants: &[
+            asset!("cookie1.png"),
+            asset!("cookie2.png"),
+            asset!("cookie3.png"),
+            asset!("cookie4.png"),
+        ],
+        shadow: (200.0, 130.0, 60.0),
+        weight: 3,
+        scale: 1.0,
+    },
+    Category {
+        name: "tiktok",
+        variants: &[asset!("tiktok.png")],
+        shadow: (5.0, 217.0, 232.0),
+        weight: 1,
+        scale: 1.0,
+    },
 ];
 
-pub const COTTAGE_SHADOW: (f32, f32, f32) = (140.0, 200.0, 255.0);
+/// The rare easter-egg drifter, outside the weighted roster.
+pub const COTTAGE: &[u8] = asset!("cottage.png");
+pub const COTTAGE_SHADOW: (f32, f32, f32) = (120.0, 190.0, 255.0);
+
+/// The per-item category roster, expanded from the weights above.
+pub fn spawn_plan() -> Vec<usize> {
+    let mut plan = Vec::new();
+    for (i, cat) in CATEGORIES.iter().enumerate() {
+        for _ in 0..cat.weight {
+            plan.push(i);
+        }
+    }
+    plan
+}
 
 /// Decode a PNG, scale it once to `target_w` (aspect preserved), premultiply,
 /// and bake the blurred alpha that stands in for the drop shadow.
@@ -69,5 +164,44 @@ pub fn build(bytes: &[u8], target_w: u32, shadow_color: (f32, f32, f32)) -> Tex 
         px,
         shadow,
         shadow_color,
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::{spawn_plan, CATEGORIES, COTTAGE};
+
+    #[test]
+    fn every_embedded_variant_decodes_with_alpha() {
+        let all = CATEGORIES
+            .iter()
+            .flat_map(|c| c.variants.iter().copied())
+            .chain(std::iter::once(COTTAGE));
+        let mut n = 0;
+        for bytes in all {
+            let img = image::load_from_memory_with_format(bytes, image::ImageFormat::Png)
+                .expect("embedded sprite failed to decode")
+                .to_rgba8();
+            assert!(
+                img.pixels().any(|p| p.0[3] < 255),
+                "sprite has no transparency"
+            );
+            n += 1;
+        }
+        assert_eq!(n, 29, "expected the full embedded roster");
+    }
+
+    #[test]
+    fn spawn_plan_follows_the_category_weights() {
+        let plan = spawn_plan();
+        assert_eq!(plan.len(), 19);
+        for (i, cat) in CATEGORIES.iter().enumerate() {
+            assert_eq!(
+                plan.iter().filter(|&&c| c == i).count(),
+                cat.weight,
+                "{} spawned off-weight",
+                cat.name
+            );
+        }
     }
 }

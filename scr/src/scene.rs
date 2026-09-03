@@ -3,7 +3,6 @@
 use crate::raster::{pack, Rng, Target, Tex};
 use crate::sprites;
 
-const ITEM_COUNT: usize = 16;
 const SWIRL_SPEED: f32 = 0.04;
 const SKY_DOWNSCALE: usize = 4;
 /// The sky only moves as fast as the swirl, so it does not need a fresh bake
@@ -84,10 +83,6 @@ impl Scene {
         // One scale-up front: sprites are rasterised at the largest size they
         // will ever be drawn, then sampled down per frame.
         let canon = (220.0 * s).round().max(96.0) as u32;
-        let drifters = sprites::DRIFTERS
-            .iter()
-            .map(|(bytes, shadow)| sprites::build(bytes, canon, *shadow))
-            .collect::<Vec<_>>();
         let cottage_tex = sprites::build(
             sprites::COTTAGE,
             (canon as f32 * 0.45).round().max(48.0) as u32,
@@ -102,7 +97,7 @@ impl Scene {
             h,
             s,
             rng,
-            drifters,
+            drifters: Vec::new(),
             cottage_tex,
             items: Vec::new(),
             stars: Vec::new(),
@@ -114,30 +109,51 @@ impl Scene {
             cottage: None,
             next_cottage: 0.0,
         };
-        scene.seed();
+        let picks = scene.seed();
+        // Only the variants that actually drift get rasterised.
+        scene.drifters = picks
+            .iter()
+            .map(|&(cat, variant)| {
+                let cat = &sprites::CATEGORIES[cat];
+                sprites::build(cat.variants[variant], canon, cat.shadow)
+            })
+            .collect();
         scene.next_cottage = scene.rng.range(20.0, 60.0);
         scene
     }
 
-    fn seed(&mut self) {
+    /// Lays out the roster and reports the `(category, variant)` pair behind
+    /// each texture slot, in `drifters` order.
+    fn seed(&mut self) -> Vec<(usize, usize)> {
         let (w, h, s) = (self.w as f32, self.h as f32, self.s);
-        let kinds = self.drifters.len();
 
-        let items = (0..ITEM_COUNT)
-            .map(|i| Item {
-                kind: i % kinds,
-                x: self.rng.range(0.0, w),
-                y: self.rng.range(0.0, h * 0.85) + h * 0.08,
-                size: self.rng.range(110.0, 200.0) * s,
-                vx: self.rng.range(6.0, 40.0) * self.rng.sign(),
-                vy: self.rng.range(4.0, 24.0) * self.rng.sign(),
-                rot: self.rng.range(-0.3, 0.3),
-                v_rot: self.rng.range(-0.35, 0.35),
-                wobble: self.rng.range(0.5, 2.7),
-                phase: self.rng.range(0.0, std::f32::consts::TAU),
-                pulse: 1.0,
-                pulse_freq: self.rng.range(1.6, 4.4),
-                pulse_amp: self.rng.range(0.08, 0.16),
+        let mut picks: Vec<(usize, usize)> = Vec::new();
+        let items = sprites::spawn_plan()
+            .into_iter()
+            .map(|cat| {
+                let variant = self.rng.below(sprites::CATEGORIES[cat].variants.len());
+                let kind = match picks.iter().position(|&p| p == (cat, variant)) {
+                    Some(i) => i,
+                    None => {
+                        picks.push((cat, variant));
+                        picks.len() - 1
+                    }
+                };
+                Item {
+                    kind,
+                    x: self.rng.range(0.0, w),
+                    y: self.rng.range(0.0, h * 0.85) + h * 0.08,
+                    size: self.rng.range(110.0, 200.0) * s * sprites::CATEGORIES[cat].scale,
+                    vx: self.rng.range(6.0, 40.0) * self.rng.sign(),
+                    vy: self.rng.range(4.0, 24.0) * self.rng.sign(),
+                    rot: self.rng.range(-0.3, 0.3),
+                    v_rot: self.rng.range(-0.35, 0.35),
+                    wobble: self.rng.range(0.5, 2.7),
+                    phase: self.rng.range(0.0, std::f32::consts::TAU),
+                    pulse: 1.0,
+                    pulse_freq: self.rng.range(1.6, 4.4),
+                    pulse_amp: self.rng.range(0.08, 0.16),
+                }
             })
             .collect();
 
@@ -166,6 +182,7 @@ impl Scene {
         self.items = items;
         self.stars = stars;
         self.sparkles = sparkles;
+        picks
     }
 
     fn bake_sky(&mut self, t: f32) {
