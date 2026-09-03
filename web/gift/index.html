@@ -279,10 +279,28 @@
     letter-spacing: .14em;
     color: rgba(120, 45, 105, .5);
   }
-  footer a { color: rgba(120, 45, 105, .7); }
+  #fullSky {
+    position: fixed;
+    top: 14px; right: 14px;
+    z-index: 15;
+    text-decoration: none;
+    font-size: 14px;
+    font-weight: 600;
+    color: var(--ink);
+    background: rgba(255,255,255,.6);
+    border: 2px solid rgba(255,255,255,.9);
+    border-radius: 8px;
+    padding: 10px 16px;
+    box-shadow: 0 8px 22px rgba(120, 40, 110, .2);
+    backdrop-filter: blur(6px);
+    -webkit-backdrop-filter: blur(6px);
+  }
+  #fullSky:active { transform: scale(.97); }
 </style>
 </head>
 <body>
+
+<a id="fullSky" href="../">🦄 Open the full sky</a>
 
 <header>
   <h1>A little sky, for you ♥</h1>
@@ -381,7 +399,7 @@
   </div>
 </div>
 
-<footer><a href="../">Open the full sky</a></footer>
+<footer>MADE WITH LOVE FOR CINDY</footer>
 
 <div id="toast"></div>
 
