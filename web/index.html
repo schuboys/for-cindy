@@ -96,6 +96,25 @@
   #shelf a.dl strong { display: block; font-size: 14px; }
   #shelf a.dl span { display: block; font-size: 12px; line-height: 1.4; opacity: .8; margin-top: 3px; }
   #shelf .sig { font-size: 11px; text-align: center; opacity: .6; margin: 12px 0 2px; letter-spacing: .1em; }
+  #help {
+    left: 50%; top: 50%;
+    transform: translate(-50%, -50%);
+    width: min(360px, 86vw);
+    background: rgba(255,255,255,.92);
+    border: 2px solid rgba(255,255,255,.95);
+    border-radius: 22px;
+    padding: 18px 20px 14px;
+    color: var(--ink);
+    box-shadow: 0 18px 44px rgba(120, 40, 110, .28);
+    display: none;
+    z-index: 13;
+  }
+  #help.open { display: block; }
+  #help h1 { font-size: 16px; margin: 0 0 10px; }
+  #help dl { display: grid; grid-template-columns: auto 1fr; gap: 5px 12px; margin: 0 0 10px; font-size: 13px; }
+  #help dt { font-weight: 700; text-align: right; white-space: nowrap; }
+  #help dd { margin: 0; opacity: .85; }
+  #help .hint { font-size: 11px; text-align: center; opacity: .6; margin: 8px 0 2px; letter-spacing: .08em; }
   #toast {
     left: 50%; transform: translateX(-50%);
     bottom: calc(max(14px, env(safe-area-inset-bottom)) + 74px);
@@ -116,6 +135,24 @@
 <canvas id="sky"></canvas>
 
 <div id="whisper" class="ui">for Cindy &hearts;</div>
+
+<div id="help" class="ui">
+  <h1>Little secrets &hearts;</h1>
+  <dl>
+    <dt>S</dt><dd>snap this moment as a wallpaper</dd>
+    <dt>D</dt><dd>open the downloads shelf</dd>
+    <dt>B</dt><dd>a surprise burst</dd>
+    <dt>C</dt><dd>summon&hellip; something creamy</dd>
+    <dt>P</dt><dd>party mode &#129682;</dd>
+    <dt>?</dt><dd>this card &middot; Esc closes things</dd>
+  </dl>
+  <dl>
+    <dt>tap</dt><dd>things pop (some talk back)</dd>
+    <dt>drag</dt><dd>fling anything, it bounces</dd>
+    <dt>Minnie</dt><dd>it rains bows</dd>
+  </dl>
+  <div class="hint">MADE WITH LOVE FOR CINDY</div>
+</div>
 
 <button id="snap" class="ui btn" type="button" title="Snap wallpaper" aria-label="Snap wallpaper">&#128248;</button>
 <button id="shelfBtn" class="ui btn" type="button" title="Downloads" aria-label="Downloads">&hearts;</button>
@@ -200,17 +237,20 @@
      immediately; the downloads only change when those are re-rendered.
      ===================================================================== */
   var CATEGORIES = {
-    coke:   ["coke.png"],
-    cotton: ["cotton.png"],
-    disney: ["disney.png", "minnie.png", "minnie2.png", "ears1.png", "ears2.png", "bow.png"],
-    candy:  ["candy1.png", "candy2.png", "candy3.png", "candy4.png", "candy5.png", "candy6.png"],
-    golden: ["golden.png", "golden2.png"],
-    tiktok: ["tiktok.png"]
+    coke:    ["coke.png"],
+    cotton:  ["cotton.png"],
+    disney:  ["disney.png", "minnie.png", "minnie2.png", "minnie3.png", "minnie4.png",
+              "mickey.png", "castle2.png", "ears1.png", "ears2.png", "bow.png"],
+    candy:   ["candy1.png", "candy2.png", "candy3.png", "candy4.png", "candy5.png", "candy6.png"],
+    golden:  ["golden.png", "golden2.png", "golden3.png", "golden4.png", "golden5.png"],
+    cookies: ["cookie1.png", "cookie2.png", "cookie3.png", "cookie4.png"],
+    tiktok:  ["tiktok.png"]
   };
   var CATEGORY_WEIGHTS = {
     disney: 5,
-    candy: 4,
+    candy: 3,
     golden: 3,
+    cookies: 3,
     coke: 2,
     cotton: 2,
     tiktok: 1
@@ -282,6 +322,7 @@
     candy: "rgba(255, 170, 0, 0.55)",
     tiktok: "rgba(5, 217, 232, 0.55)",
     golden: "rgba(255, 180, 90, 0.55)",
+    cookies: "rgba(200, 130, 60, 0.55)",
     cottage: "rgba(120, 190, 255, 0.5)"
   };
 
@@ -521,6 +562,34 @@
   }
 
   /* ---------- update ---------- */
+  function collideItems() {
+    for (var i = 0; i < items.length; i++) {
+      var a = items[i];
+      if (a.dragging) continue;
+      for (var j = i + 1; j < items.length; j++) {
+        var b = items[j];
+        if (b.dragging) continue;
+        var dx = b.x - a.x, dy = b.y - a.y;
+        var rr = (a.size + b.size) * 0.3;
+        var d2 = dx * dx + dy * dy;
+        if (d2 >= rr * rr || d2 < 1) continue;
+        var d = Math.sqrt(d2), nx = dx / d, ny = dy / d;
+        var push = (rr - d) * 0.5;
+        a.x -= nx * push; a.y -= ny * push;
+        b.x += nx * push; b.y += ny * push;
+        var avn = a.vx * nx + a.vy * ny;
+        var bvn = b.vx * nx + b.vy * ny;
+        if (avn - bvn > 0) {
+          var m = (avn - bvn) * 0.85;
+          a.vx -= m * nx; a.vy -= m * ny;
+          b.vx += m * nx; b.vy += m * ny;
+          a.pop = Math.max(a.pop, 0.2);
+          b.pop = Math.max(b.pop, 0.2);
+        }
+      }
+    }
+  }
+
   function moveItem(item, dt, t, s, bounceAll) {
     if (item.dragging) return;
     if (item.flung > 0) {
@@ -555,6 +624,9 @@
     var s = scaleOf();
 
     for (var i = 0; i < items.length; i++) moveItem(items[i], dt, t, s, false);
+
+    // gentle item-on-item bumps — live page only, never in headless renders
+    if (!RENDER) collideItems();
 
     if (cottage) {
       if (cottage.dragging || cottage.flung > 0) {
@@ -891,6 +963,8 @@
           addBurst(it.x, it.y - it.size * 0.6, "MINNIE!", "#ff006e");
         } else if (it.cat === "golden") {
           addBurst(it.x, it.y - it.size * 0.6, "GOOD DOG!", "#ff9f1c");
+        } else if (it.cat === "cookies") {
+          addBurst(it.x, it.y - it.size * 0.6, "COOKIES!!", "#c8823c");
         } else {
           addBurst(it.x, it.y - it.size * 0.6, TAP_WORDS[Math.floor(rnd() * TAP_WORDS.length)]);
         }
@@ -917,6 +991,32 @@
   var shelf = document.getElementById("shelf");
   var whisper = document.getElementById("whisper");
   var toastEl = document.getElementById("toast");
+  var helpEl = document.getElementById("help");
+
+  /* ---------- disco mode ---------- */
+  var disco = false, discoT = 0, nextDiscoDrop = 0;
+  function toggleDisco() {
+    disco = !disco;
+    if (disco) {
+      discoT = 0;
+      nextDiscoDrop = 0;
+      toast("🪩 disco!");
+    } else {
+      canvas.style.filter = "";
+      toast("ok, back to dreamy ♥");
+    }
+  }
+  function discoTick(dt) {
+    if (!disco) return;
+    discoT += dt;
+    var hue = Math.round((discoT * 90) % 360);
+    var beat = 1 + 0.06 * Math.sin(discoT * 7);
+    canvas.style.filter = "hue-rotate(" + hue + "deg) saturate(" + (1.35 * beat).toFixed(2) + ")";
+    if (discoT > nextDiscoDrop) {
+      eruptConfetti(W * (0.1 + rnd() * 0.8), H * (0.05 + rnd() * 0.3));
+      nextDiscoDrop = discoT + 1.6 + rnd() * 1.8;
+    }
+  }
 
   function setDim(on) {
     for (var i = 0; i < uiEls.length; i++) {
@@ -986,6 +1086,7 @@
     if (dt > 0.1) dt = 0.1;
     simT += dt;
     update(dt, simT);
+    discoTick(dt);
     drawScene(ctx, W, H, simT);
   }
 
@@ -1012,7 +1113,7 @@
 
   if (RENDER) {
     document.body.style.overflow = "hidden";
-    var hide = [snapBtn, shelfBtn, shelf, whisper, toastEl];
+    var hide = [snapBtn, shelfBtn, shelf, whisper, toastEl, helpEl];
     for (var hi = 0; hi < hide.length; hi++) hide[hi].parentNode.removeChild(hide[hi]);
     resize();
     seedScene();
@@ -1108,6 +1209,40 @@
       shelf.classList.toggle("open");
       shelf.classList.remove("dim");
       wakeUI();
+    });
+
+    window.addEventListener("keydown", function (e) {
+      if (e.metaKey || e.ctrlKey || e.altKey) return;
+      var k = e.key;
+      if (k === "Escape") {
+        shelf.classList.remove("open");
+        helpEl.classList.remove("open");
+        return;
+      }
+      if (k === "s" || k === "S") { wakeUI(); snapWallpaper(); }
+      else if (k === "d" || k === "D") {
+        wakeUI();
+        shelf.classList.toggle("open");
+        shelf.classList.remove("dim");
+      }
+      else if (k === "b" || k === "B") {
+        addBurst(
+          W * (0.15 + rnd() * 0.7),
+          H * (0.12 + rnd() * 0.5),
+          TAP_WORDS[Math.floor(rnd() * TAP_WORDS.length)]
+        );
+      }
+      else if (k === "c" || k === "C") {
+        if (!cottage) {
+          spawnCottage();
+          nextCottage = simT + 90 + rnd() * 90;
+          toast("shhh ♥");
+        }
+      }
+      else if (k === "p" || k === "P") { toggleDisco(); }
+      else if (k === "?") { helpEl.classList.toggle("open"); }
+      else return;
+      e.preventDefault();
     });
 
     wakeUI();
