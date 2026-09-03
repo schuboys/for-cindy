@@ -6,6 +6,17 @@
 <meta name="color-scheme" content="light">
 <meta name="robots" content="noindex">
 <title>For Cindy ♥</title>
+<meta property="og:type" content="website">
+<meta property="og:site_name" content="Cindy's Sky">
+<meta property="og:title" content="A little sky, for you ♥">
+<meta property="og:description" content="Tap it, fling it, take it home — wallpapers, a screensaver, and a moving sky, made just for you.">
+<meta property="og:url" content="https://cindy.coreyschuman.com/gift/">
+<meta property="og:image" content="https://cindy.coreyschuman.com/assets/og.png">
+<meta property="og:image:width" content="1200">
+<meta property="og:image:height" content="630">
+<meta name="twitter:card" content="summary_large_image">
+<meta name="twitter:title" content="A little sky, for you ♥">
+<meta name="twitter:image" content="https://cindy.coreyschuman.com/assets/og.png">
 <style>
   :root {
     --edge: #8cc8fc;
@@ -114,6 +125,15 @@
     border: 10px solid #fff;
     border-radius: 40px;
     box-shadow: 0 24px 60px rgba(120, 40, 110, .30);
+  }
+  /* Side by side: both devices share the same overall height.
+     Monitor total = screen + 24px border + 34px neck + 12px foot;
+     phone total = screen + 20px border — hence the -50px. */
+  @media (min-width: 900px) {
+    main { flex-wrap: nowrap; }
+    .card { max-width: none; }
+    .phone .screen { width: auto; height: min(480px, 34vw); }
+    .monitor .screen { width: auto; height: calc(min(480px, 34vw) - 50px); }
   }
   .phone .island {
     position: absolute;
