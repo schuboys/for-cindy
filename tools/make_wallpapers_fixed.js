@@ -8,12 +8,12 @@ fs.mkdirSync(DIST, { recursive: true });
 fs.mkdirSync(ALTS, { recursive: true });
 
 const SIZES = [
-  { w: 1920, h: 1080, tag: '1920x1080', chosen: 7 },
-  { w: 2560, h: 1440, tag: '2560x1440', chosen: 7 },
-  { w: 3840, h: 2160, tag: '3840x2160', chosen: 7 },
-  { w: 1290, h: 2796, tag: '1290x2796', chosen: 21 },
+  { w: 1920, h: 1080, tag: '1920x1080', chosen: 3 },
+  { w: 2560, h: 1440, tag: '2560x1440', chosen: 3 },
+  { w: 3840, h: 2160, tag: '3840x2160', chosen: 3 },
+  { w: 1290, h: 2796, tag: '1290x2796', chosen: 17 },
 ];
-const SEEDS = [7, 21, 42];
+const SEEDS = [3, 17, 19];
 const T = 12;
 
 (async () => {
