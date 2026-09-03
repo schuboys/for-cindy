@@ -213,6 +213,11 @@
     if (m) RENDER = { w: parseInt(m[1], 10), h: parseInt(m[2], 10) };
   }
   var EMBED = params.get("embed") === "1";
+  /* Embed-only item scale (the /gift device frames pass this so sprites
+     read proportionally inside a tiny canvas). Default 1 — the headless
+     render path never passes it, so all pre-rendered media is unchanged. */
+  var ISCALE = parseFloat(params.get("iscale") || "1");
+  if (!isFinite(ISCALE) || ISCALE <= 0 || ISCALE > 3) ISCALE = 1;
   var SEED = parseInt(params.get("seed") || "1", 10);
   if (!isFinite(SEED)) SEED = 1;
   var RENDER_T = parseFloat(params.get("t") || "0");
@@ -340,7 +345,7 @@
   var simT = 0;
   var grainTile = null;
 
-  function scaleOf() { return H / 1080; }
+  function scaleOf() { return (H / 1080) * ISCALE; }
 
   function seedScene() {
     var s = scaleOf();
